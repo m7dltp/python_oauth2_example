@@ -7,7 +7,7 @@ import os
 from functools import wraps
 
 import requests
-from authlib.flask.client import OAuth
+from authlib.integrations.flask_client import OAuth
 from flask import Flask
 from flask import jsonify
 from flask import redirect
@@ -25,8 +25,8 @@ oauth = OAuth(app)
 
 os.environ.setdefault('AUTHLIB_INSECURE_TRANSPORT', '1')  # use http
 
-CLIENT_ID = 'YOUR-CLIENT-ID'
-CLIENT_SECRET = 'YOUR-CLIENT-SECRET'
+CLIENT_ID = 'Op7Vr92nfNVPGrEcvrdsq6N7'
+CLIENT_SECRET = 'c3Azmrmu0POUIln9CsR3wbMT4zfYArXjvcKBkX96EHvS6OFI'
 
 REDIRECT_URI = 'http://127.0.0.1:3000/callback'
 
@@ -35,8 +35,8 @@ auth0 = oauth.register(
     client_id=CLIENT_ID,
     client_secret=CLIENT_SECRET,
     api_base_url='http://127.0.0.1:5000',
-    access_token_url='http://127.0.0.1:5000/oauth/token',
-    authorize_url='http://127.0.0.1:5000/oauth/authorize',
+    access_token_url='http://localhost:5000/oauth/token',
+    authorize_url='http://localhost:5000/oauth/authorize',
     client_kwargs={
         'scope': 'profile',
     },
@@ -108,4 +108,4 @@ def home():
 
 
 if __name__ == "__main__":
-    app.run(host='127.0.0.1', port=3000)
+    app.run(host='127.0.0.1', port=3000, debug=True)

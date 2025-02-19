@@ -1,11 +1,12 @@
-from authlib.flask.oauth2 import AuthorizationServer, ResourceProtector
-from authlib.flask.oauth2.sqla import (
+from authlib.integrations.flask_oauth2 import AuthorizationServer, ResourceProtector
+from authlib.integrations.sqla_oauth2  import (
     create_query_client_func,
     create_save_token_func,
     create_revocation_endpoint,
     create_bearer_token_validator,
 )
-from authlib.specs.rfc6749 import grants
+
+from authlib.oauth2.rfc6749 import grants
 from werkzeug.security import gen_salt
 
 from .models import OAuth2Client, OAuth2AuthorizationCode, OAuth2Token
@@ -13,19 +14,47 @@ from .models import db, User
 
 
 class AuthorizationCodeGrant(grants.AuthorizationCodeGrant):
-    def create_authorization_code(self, client, user, request):
-        code = gen_salt(48)
-        item = OAuth2AuthorizationCode(
+    TOKEN_ENDPOINT_AUTH_METHODS = [
+        'client_secret_basic',
+        'client_secret_post',
+        'none',
+    ]
+
+    # def create_authorization_code(self, client, user, request):
+    #     code = gen_salt(48)
+    #     item = OAuth2AuthorizationCode(
+    #         code=code,
+    #         client_id=request.client.client_id,
+    #         redirect_uri=request.redirect_uri,
+    #         scope=request.scope,
+    #         user_id=request.user.id,
+    #     )
+    #     db.session.add(item)
+    #     db.session.commit()
+    #     return code
+
+    def save_authorization_code(self, code, request):
+        code_challenge = request.data.get('code_challenge')
+        code_challenge_method = request.data.get('code_challenge_method')
+        auth_code = OAuth2AuthorizationCode(
             code=code,
-            client_id=client.client_id,
+            client_id=request.client.client_id,
             redirect_uri=request.redirect_uri,
             scope=request.scope,
-            user_id=user.id,
+            user_id=request.user.id,
+            code_challenge=code_challenge,
+            code_challenge_method=code_challenge_method,
         )
-        db.session.add(item)
+        db.session.add(auth_code)
         db.session.commit()
-        return code
-
+        return auth_code
+    
+    def query_authorization_code(self, code, client):
+        auth_code = OAuth2AuthorizationCode.query.filter_by(
+            code=code, client_id=client.client_id).first()
+        if auth_code and not auth_code.is_expired():
+            return auth_code
+        
     def parse_authorization_code(self, code, client):
         item = OAuth2AuthorizationCode.query.filter_by(
             code=code, client_id=client.client_id).first()

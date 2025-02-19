@@ -30,5 +30,10 @@ def create_app(config=None):
 
 def setup_app(app):
     db.init_app(app)
+
+    # Create tables if they do not exist already
+    # with app.app_context():
+    #     db.create_all()
+
     config_oauth(app)
     app.register_blueprint(bp, url_prefix='')

@@ -1,0 +1,20 @@
+[{
+    "client_id": "4n9RPEyv3n063GCrR2w4qqxu",
+    "client_id_issued_at": 1739968143,
+    "client_secret": "7tWwlrD2m9ZzBWFUh33gcrzSJKJCljl0vyTR3BFzhzBHZK3b",
+    "client_secret_expires_at": 0
+}, {
+    "client_name": "Merce",
+    "client_uri": "http://localhost:3000",
+    "grant_types": [
+        "authorization_code"
+    ],
+    "redirect_uris": [
+        "http://localhost:3000/callback"
+    ],
+    "response_types": [
+        "code"
+    ],
+    "scope": "profile",
+    "token_endpoint_auth_method": "client_secret_basic"
+}]

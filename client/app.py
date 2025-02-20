@@ -9,7 +9,7 @@ from functools import wraps
 import requests
 from authlib.integrations.flask_client import OAuth
 from flask import Flask
-from flask import jsonify
+from flask import jsonify, request
 from flask import redirect
 from flask import render_template
 from flask import session
@@ -25,22 +25,23 @@ oauth = OAuth(app)
 
 os.environ.setdefault('AUTHLIB_INSECURE_TRANSPORT', '1')  # use http
 
-CLIENT_ID = 'Op7Vr92nfNVPGrEcvrdsq6N7'
-CLIENT_SECRET = 'c3Azmrmu0POUIln9CsR3wbMT4zfYArXjvcKBkX96EHvS6OFI'
+CLIENT_ID = 'UgTrMU1fYWH1h5loSWfCKffR'
+CLIENT_SECRET = '1JjHdJnlGfeHQTpu78rgyzf6d2nUQJC2HUQxHirnkBxDHkWn'
 
 REDIRECT_URI = 'http://127.0.0.1:3000/callback'
 
 auth0 = oauth.register(
-    'woko_test',
+    'register_test',
     client_id=CLIENT_ID,
     client_secret=CLIENT_SECRET,
     api_base_url='http://127.0.0.1:5000',
-    access_token_url='http://localhost:5000/oauth/token',
-    authorize_url='http://localhost:5000/oauth/authorize',
+    access_token_url='http://127.0.0.1:5000/oauth/token',
+    authorize_url='http://127.0.0.1:5000/oauth/authorize',
     client_kwargs={
         'scope': 'profile',
     },
 )
+
 
 
 # Here we're using the /callback route.
@@ -48,10 +49,11 @@ auth0 = oauth.register(
 def callback_handling():
     # Handles response from token endpoint
     token = auth0.authorize_access_token()
+    print("token")
 
     # If it's a jwt, we can decode from it,
     # otherwise get from userinfo api like this
-    res = oauth.woko_test.get('/api/me')  # type: requests.Response
+    res = oauth.register_test.get('/api/me')  # type: requests.Response
     userinfo = res.json()
 
     # Store the user information in flask session.
@@ -100,6 +102,12 @@ def handle_auth_error(ex):
     response.status_code = (ex.code if isinstance(ex, HTTPException) else 500)
     return response
 
+
+@app.route('/prova', methods=['POST'])
+def prova():
+    response = request.get_json()
+    print(response["client_secret"])
+    return response
 
 # Controllers API
 @app.route('/')

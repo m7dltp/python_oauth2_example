@@ -32,7 +32,7 @@ class OAuth2Client(db.Model, OAuth2ClientMixin):
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(
         db.Integer, db.ForeignKey('user.id', ondelete='CASCADE'))
-    user = db.relationship('User')
+    user = db.relationship('User') 
 
 
 class OAuth2AuthorizationCode(db.Model, OAuth2AuthorizationCodeMixin):
@@ -57,3 +57,17 @@ class OAuth2Token(db.Model, OAuth2TokenMixin):
             return False
         expires_at = self.issued_at + self.expires_in * 2
         return expires_at >= time.time()
+
+
+# Taula creada per mi
+class AllowedUsers(db.Model):
+    __tablename__ = "allowed_users"
+
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(
+        db.Integer, db.ForeignKey('user.id', ondelete='CASCADE'))
+    user = db.relationship('User')
+
+    def __str__(self):
+        return self.user_id
+

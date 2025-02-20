@@ -4,13 +4,15 @@ from flask import Blueprint, request, session, url_for
 from flask import render_template, redirect, jsonify
 from werkzeug.security import gen_salt
 
-from .models import db, User, OAuth2Client
+from .models import db, User, OAuth2Client, OAuth2Token, AllowedUsers
 from .oauth2 import authorization, require_oauth
+import requests
 
 bp = Blueprint('home', __name__)
 
 
 def current_user():
+    print("session", session)
     if 'id' in session:
         uid = session['id']
         return User.query.get(uid)
@@ -25,18 +27,33 @@ def home():
         username = request.form.get('username')
         user = User.query.filter_by(username=username).first()
         if not user:
+            print("User not in user table")
             user = User(username=username)
             db.session.add(user)
             db.session.commit()
+
+        print("User in session: ", session)
         session['id'] = user.id
         # if user is not just to log in, but need to head back to the auth page, then go for it
-        # next_page = request.args.get('next')
-        # if next_page:
-        #     return redirect(next_page)
+        next_page = request.args.get('next')
+        if next_page:
+            return redirect(next_page)
+        print("redirecting to /")
         return redirect('/')
     user = current_user()
     if user:
         clients = OAuth2Client.query.filter_by(user_id=user.id).all()
+        # tokens = OAuth2Token.query.filter_by(user_id=user.id).all()
+        # print("tokens del user", user.id)
+        # print([t.access_token for t in tokens])
+
+        # print("buscar en la taula allowed")
+        # query = AllowedUsers.query.filter_by(user_id=user.id).all() # select from where
+        # print(len(query)) si és 0 no està allowed
+        # if user.username == "usuari0":
+        #     userAllowed = AllowedUsers(user_id=user.id)
+        #     db.session.add(userAllowed)
+        #     db.session.commit()
     else:
         clients = []
     return render_template('home.html', user=user, clients=clients)
@@ -60,6 +77,7 @@ def create_client():
     if request.method == 'GET':
         return render_template('create_client.html')
     
+    # """
     client_id = gen_salt(24)
     client_id_issued_at = int(time.time())
     client = OAuth2Client(
@@ -67,17 +85,15 @@ def create_client():
         client_id_issued_at=client_id_issued_at,
         user_id=user.id,
     )
-    # client = OAuth2Client(**request.form.to_dict(flat=True))
-    # client.user_id = user.id
-    # client.client_id = gen_salt(24)
+
     form = request.form
     client_metadata = {
         "client_name": form["client_name"],
-        "client_uri": form["client_uri"],
+        "client_uri": "http://127.0.0.1:3000", # form["client_uri"]
         "grant_types": split_by_crlf(form["grant_type"]),
-        "redirect_uris": split_by_crlf(form["redirect_uri"]),
-        "response_types": split_by_crlf(form["response_type"]),
-        "scope": form["scope"],
+        "redirect_uris": ["http://127.0.0.1:3000/callback"],  # split_by_crlf(form["redirect_uri"])
+        "response_types": ["code"], # split_by_crlf(form["response_type"])
+        "scope": "profile", # form["scope"]
         "token_endpoint_auth_method": form["token_endpoint_auth_method"]
     }
     client.set_client_metadata(client_metadata)
@@ -89,14 +105,19 @@ def create_client():
 
     db.session.add(client)
     db.session.commit()
+    # """
+    
+    # res = requests.post('http://localhost:3000/prova', json= {"client_secret": "client.client_secret"})
+    # print ('response from server:',res.text)
+
     return redirect('/')
 
 
 @bp.route('/oauth/authorize', methods=['GET', 'POST'])
 def authorize():
     user = current_user()
-    # if not user:
-    #     return redirect(url_for('home.home', next=request.url))
+    if not user:
+        return redirect(url_for('home.home', next=request.url))
     if request.method == 'GET':
         try:
             grant = authorization.get_consent_grant(end_user=user)
@@ -108,6 +129,7 @@ def authorize():
         user = User.query.filter_by(username=username).first()
     if request.form['confirm']:
         grant_user = user
+        print("grant_user", grant_user)
     else:
         grant_user = None
     return authorization.create_authorization_response(grant_user=grant_user)
@@ -115,6 +137,7 @@ def authorize():
 
 @bp.route('/oauth/token', methods=['POST'])
 def issue_token():
+    print('/oauth/token')
     return authorization.create_token_response()
 
 
@@ -126,5 +149,13 @@ def revoke_token():
 @bp.route('/api/me')
 @require_oauth('profile')
 def api_me():
+    # current token instance of the OAuth Token model
     user = current_token.user
+    print("user", user)
     return jsonify(id=user.id, username=user.username)
+
+# @bp.route('/api/me')
+# @require_oauth('prova')
+# def api_me():
+#     user = current_token.user
+#     return jsonify(id=user.id, username="user.username")

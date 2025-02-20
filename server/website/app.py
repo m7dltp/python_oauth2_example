@@ -8,6 +8,7 @@ from .routes import bp
 
 
 def create_app(config=None):
+    print("creating app")
     app = Flask(__name__)
 
     # load default configuration
@@ -29,11 +30,7 @@ def create_app(config=None):
 
 
 def setup_app(app):
+    print("setup app")
     db.init_app(app)
-
-    # Create tables if they do not exist already
-    # with app.app_context():
-    #     db.create_all()
-
     config_oauth(app)
     app.register_blueprint(bp, url_prefix='')

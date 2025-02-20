@@ -6,7 +6,10 @@ from werkzeug.security import gen_salt
 
 from .models import db, User, OAuth2Client, OAuth2Token, AllowedUsers
 from .oauth2 import authorization, require_oauth
-import requests
+
+from urllib.parse import urlparse, parse_qs
+
+
 
 bp = Blueprint('home', __name__)
 
@@ -25,21 +28,26 @@ def split_by_crlf(s):
 def home():
     if request.method == 'POST':
         username = request.form.get('username')
+        password = request.form.get('password')
         user = User.query.filter_by(username=username).first()
+
+        if user.check_password(password):
+            print("User in session and good password")
+            session['id'] = user.id
+            # if user is not just to log in, but need to head back to the auth page, then go for it
+            next_page = request.args.get('next')
+            if next_page:
+                return redirect(next_page)
+            print("redirecting to /")
+            return redirect('/')
+            
         if not user:
             print("User not in user table")
-            user = User(username=username)
+            user = User(username=username, password=password)
             db.session.add(user)
             db.session.commit()
 
-        print("User in session: ", session)
-        session['id'] = user.id
-        # if user is not just to log in, but need to head back to the auth page, then go for it
-        next_page = request.args.get('next')
-        if next_page:
-            return redirect(next_page)
-        print("redirecting to /")
-        return redirect('/')
+        
     user = current_user()
     if user:
         clients = OAuth2Client.query.filter_by(user_id=user.id).all()
@@ -71,6 +79,8 @@ def logout():
 @bp.route('/create_client', methods=('GET', 'POST'))
 def create_client():
     import time
+    import json
+    
     user = current_user()
     if not user:
         return redirect('/')
@@ -102,6 +112,9 @@ def create_client():
         client.client_secret = ''
     else:
         client.client_secret = gen_salt(48)
+    
+    client_return = {"client_id": client_id,
+                     "client_secret": client.client_secret}
 
     db.session.add(client)
     db.session.commit()
@@ -109,8 +122,9 @@ def create_client():
     
     # res = requests.post('http://localhost:3000/prova', json= {"client_secret": "client.client_secret"})
     # print ('response from server:',res.text)
-
-    return redirect('/')
+    
+    return json.dumps(client_return) 
+    # return redirect('/')
 
 
 @bp.route('/oauth/authorize', methods=['GET', 'POST'])
@@ -127,17 +141,22 @@ def authorize():
     if not user and 'username' in request.form:
         username = request.form.get('username')
         user = User.query.filter_by(username=username).first()
-    if request.form['confirm']:
-        grant_user = user
-        print("grant_user", grant_user)
-    else:
-        grant_user = None
-    return authorization.create_authorization_response(grant_user=grant_user)
+    # if request.form['confirm']:
+    #     grant_user = user
+    #     print("grant_user", grant_user)
+    # else:
+    #     grant_user = None
+    grant_user = user
+    response = authorization.create_authorization_response(grant_user=grant_user)
+    redirect_url = response.location
+    parsed_url = urlparse(redirect_url)
+    query_params = parse_qs(parsed_url.query)
+    # print("code: ", query_params["code"][0])
+    return {"code": query_params["code"][0]} # response
 
 
 @bp.route('/oauth/token', methods=['POST'])
 def issue_token():
-    print('/oauth/token')
     return authorization.create_token_response()
 
 

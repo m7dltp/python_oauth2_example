@@ -1,6 +1,11 @@
+# password
 curl -u j6AsFsvK0DVdHmF5XU3tOdfv:4uUa4skjIZMR9G5qThDqHTq0J7qaIr81EJ50WqK4ctFH1e6H -XPOST http://127.0.0.1:5000/oauth/token -F grant_type=password -F username=curl -F password=valid -F scope=profile
+
 curl -H "Authorization: Bearer PAHEqCZOOgaJfrTPRnXRAYsvZDPoHtLX3W82Ep4SCX" http://127.0.0.1:5000/api/me
 
+# authorization_code
 open http://127.0.0.1:5000/oauth/authorize?response_type=code&client_id=AxXLSbUAcw8o0jQSqAXTQMeQ&scope=profile
+
 curl -u AxXLSbUAcw8o0jQSqAXTQMeQ:p8gEWgWxRiHt08uuFAWfUgX8emX4UnBLT6O2YsFppySaxAJs -XPOST http://127.0.0.1:5000/oauth/token -F grant_type=authorization_code -F code=BkRW058zswSzz1lPVwjWmgQMLFbNL04N6S28j1A58SLGSaqI -F scope=profile
+
 curl -H "Authorization: Bearer gTowuc9Nb1qfuxJQqDEx664BnD64JamqX4vQllOY3Z" http://127.0.0.1:5000/api/me

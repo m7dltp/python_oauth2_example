@@ -67,6 +67,8 @@ class AllowedUsers(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(
         db.Integer, db.ForeignKey('user.id', ondelete='CASCADE'))
+    username = db.Column(db.String(40), unique=True, nullable=False)
+    
     user = db.relationship('User')
 
     def __str__(self):

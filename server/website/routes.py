@@ -4,8 +4,8 @@ from flask import Blueprint, request, session, url_for
 from flask import render_template, redirect, jsonify
 from werkzeug.security import gen_salt
 
-from .models import db, User, OAuth2Client, OAuth2Token, AllowedUsers
-from .oauth2 import authorization, require_oauth
+from models import db, User, OAuth2Client, OAuth2Token, AllowedUsers
+from oauth2 import authorization, require_oauth
 
 from urllib.parse import urlparse, parse_qs
 
@@ -31,21 +31,42 @@ def home():
         password = request.form.get('password')
         user = User.query.filter_by(username=username).first()
 
-        if user.check_password(password):
-            print("User in session and good password")
-            session['id'] = user.id
-            # if user is not just to log in, but need to head back to the auth page, then go for it
-            next_page = request.args.get('next')
-            if next_page:
-                return redirect(next_page)
-            print("redirecting to /")
-            return redirect('/')
+        if user:
+            if user.check_password(password):
+                print("User in session and good password")        
+                session['id'] = user.id
+                # if user is not just to log in, but need to head back to the auth page, then go for it
+                next_page = request.args.get('next')
+                if next_page:
+                    return redirect(next_page)
+                return redirect('/')
+            else:
+                return {"message": "Incorrect password"}
             
-        if not user:
-            print("User not in user table")
-            user = User(username=username, password=password)
-            db.session.add(user)
-            db.session.commit()
+        else: # not user:
+            print("User not registered (not in user table)")
+
+            print("buscar en la taula allowed")
+            query = AllowedUsers.query.filter_by(user_id=username).all() # select from where
+
+            if len(query) == 0: # si és 0 no està allowed
+                return {"message": "User not allowed"}
+          
+            elif user.username == "usuari0": # exemple, per tenir un permès
+                userAllowed = AllowedUsers(user_id=user.id)
+                db.session.add(userAllowed)
+                db.session.commit()
+
+                print("Registrant usuari")
+                user = User(username=username, password=password)
+                db.session.add(user)
+                db.session.commit()
+
+            else: # usuari dins de la llista de permesos
+                print("Registrant usuari")
+                user = User(username=username, password=password)
+                db.session.add(user)
+                db.session.commit()
 
         
     user = current_user()
@@ -55,13 +76,7 @@ def home():
         # print("tokens del user", user.id)
         # print([t.access_token for t in tokens])
 
-        # print("buscar en la taula allowed")
-        # query = AllowedUsers.query.filter_by(user_id=user.id).all() # select from where
-        # print(len(query)) si és 0 no està allowed
-        # if user.username == "usuari0":
-        #     userAllowed = AllowedUsers(user_id=user.id)
-        #     db.session.add(userAllowed)
-        #     db.session.commit()
+        
     else:
         clients = []
     return render_template('home.html', user=user, clients=clients)
@@ -99,9 +114,9 @@ def create_client():
     form = request.form
     client_metadata = {
         "client_name": form["client_name"],
-        "client_uri": "http://127.0.0.1:3000", # form["client_uri"]
+        "client_uri": "http://127.0.0.1:5000", # form["client_uri"] = "http://127.0.0.1:3000"
         "grant_types": split_by_crlf(form["grant_type"]),
-        "redirect_uris": ["http://127.0.0.1:3000/callback"],  # split_by_crlf(form["redirect_uri"])
+        "redirect_uris": ["http://127.0.0.1:5000/callback"],  # split_by_crlf(form["redirect_uri"])
         "response_types": ["code"], # split_by_crlf(form["response_type"])
         "scope": "profile", # form["scope"]
         "token_endpoint_auth_method": form["token_endpoint_auth_method"]
@@ -170,11 +185,23 @@ def revoke_token():
 def api_me():
     # current token instance of the OAuth Token model
     user = current_token.user
-    print("user", user)
     return jsonify(id=user.id, username=user.username)
 
-# @bp.route('/api/me')
-# @require_oauth('prova')
-# def api_me():
-#     user = current_token.user
-#     return jsonify(id=user.id, username="user.username")
+
+
+
+
+
+# poligons ------------------------------------------
+from components import database
+
+@bp.route('/get_polygons') # , methods=['POST']
+@require_oauth('profile')
+def getPolygons():
+    # data = request.get_json()
+    # date = data.get('date', '')
+    date = "2024-12-27"
+    polygons_list = database.returnPolygons(date)
+
+    return jsonify({'polygons': polygons_list})
+

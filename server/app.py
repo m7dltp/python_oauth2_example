@@ -15,6 +15,14 @@ app = create_app({
     'SQLALCHEMY_DATABASE_URI': f'mysql+pymysql://{username}:{password}@{database_name}',
 })
 
+# Client -------------------------------------------------------------------
+from authlib.integrations.flask_client import OAuth
+app.secret_key = 'secret'
+oauth = OAuth(app)
+# Client -------------------------------------------------------------------
+
+
+
 # python -m flask initdb
 @app.cli.command("initdb")
 def initdb():
